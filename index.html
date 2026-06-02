@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="주식분석" />
+  <meta name="description" content="한국 주식 AI 분석기 — 종목코드 입력으로 핵심 지표 한눈에" />
+  <title>주식 AI 분석기</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0a;
+      --bg2: #141414;
+      --bg3: #1c1c1c;
+      --border: rgba(255,255,255,0.08);
+      --border2: rgba(255,255,255,0.14);
+      --text: #f0f0f0;
+      --text2: #888;
+      --text3: #555;
+      --up: #f04e2f;
+      --down: #4a9eff;
+      --green: #1db874;
+      --blue: #4a9eff;
+      --amber: #f5a623;
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    body {
+      font-family: -apple-system, 'Pretendard', 'Noto Sans KR', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Header */
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(10,10,10,0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 0.5px solid var(--border);
+      padding: 14px 16px 12px;
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .app-icon {
+      width: 32px; height: 32px;
+      background: var(--up);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; color: #fff;
+      flex-shrink: 0;
+    }
+    .app-title { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
+    .app-subtitle { font-size: 11px; color: var(--text3); margin-left: auto; }
+
+    /* Search */
+    .search-wrap {
+      display: flex;
+      gap: 8px;
+    }
+    .search-input {
+      flex: 1;
+      background: var(--bg3);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 15px;
+      padding: 10px 14px;
+      outline: none;
+      -webkit-appearance: none;
+      transition: border-color 0.15s;
+    }
+    .search-input:focus { border-color: var(--border2); }
+    .search-input::placeholder { color: var(--text3); }
+    .search-btn {
+      background: var(--up);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 10px 18px;
+      cursor: pointer;
+      white-space: nowrap;
+      -webkit-tap-highlight-color: transparent;
+      transition: opacity 0.15s;
+    }
+    .search-btn:active { opacity: 0.75; }
+
+    /* Chips */
+    .chips-wrap {
+      padding: 10px 16px;
+      display: flex;
+      gap: 7px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .chips-wrap::-webkit-scrollbar { display: none; }
+    .chip {
+      flex-shrink: 0;
+      font-size: 12px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 0.5px solid var(--border2);
+      color: var(--text2);
+      background: var(--bg2);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: all 0.15s;
+    }
+    .chip:active { background: var(--bg3); color: var(--text); }
+
+    /* Main content */
+    .main { padding: 0 16px 32px; }
+
+    /* Empty state */
+    .empty {
+      text-align: center;
+      padding: 80px 20px 40px;
+      color: var(--text3);
+    }
+    .empty i { font-size: 48px; margin-bottom: 14px; display: block; }
+    .empty p { font-size: 14px; line-height: 1.7; }
+
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--text2);
+      font-size: 14px;
+    }
+    .spinner {
+      display: inline-block;
+      width: 22px; height: 22px;
+      border: 2px solid var(--border2);
+      border-top-color: var(--up);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin-bottom: 14px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Error */
+    .error {
+      background: rgba(240,78,47,0.08);
+      border: 0.5px solid rgba(240,78,47,0.25);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-top: 16px;
+      color: var(--up);
+      font-size: 13px;
+    }
+
+    /* Section label */
+    .section-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin: 20px 0 10px;
+    }
+
+    /* Price card */
+    .price-card {
+      background: var(--bg2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-top: 16px;
+    }
+    .company-meta { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .company-sector { font-size: 11px; color: var(--text3); margin-bottom: 3px; }
+    .company-name { font-size: 19px; font-weight: 600; letter-spacing: -0.3px; }
+    .market-cap-label { font-size: 10px; color: var(--text3); text-align: right; }
+    .market-cap-val { font-size: 14px; font-weight: 500; text-align: right; margin-top: 2px; }
+    .price-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; }
+    .price-current { font-size: 30px; font-weight: 700; letter-spacing: -0.5px; }
+    .price-change { font-size: 14px; font-weight: 600; }
+    .up { color: var(--up); }
+    .down { color: var(--down); }
+    .range-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text3); margin-bottom: 5px; }
+    .range-bar { position: relative; height: 5px; background: var(--bg3); border-radius: 3px; }
+    .range-fill { position: absolute; height: 100%; background: var(--border2); border-radius: 3px; }
+    .range-dot { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 11px; height: 11px; border-radius: 50%; background: var(--up); border: 2px solid var(--bg2); }
+
+    /* Metrics grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .metric-card {
+      background: var(--bg2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 12px 10px;
+    }
+    .metric-label { font-size: 10px; color: var(--text3); margin-bottom: 5px; }
+    .metric-val { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
+    .metric-sub { font-size: 10px; color: var(--text3); margin-top: 4px; line-height: 1.4; }
+
+    /* Bar chart */
+    .bar-section {
+      background: var(--bg2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 14px 10px;
+    }
+    .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+    .bar-year { font-size: 11px; color: var(--text2); width: 34px; flex-shrink: 0; }
+    .bar-track { flex: 1; height: 8px; background: var(--bg3); border-radius: 4px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+    .bar-val { font-size: 11px; color: var(--text2); width: 70px; text-align: right; flex-shrink: 0; }
+
+    /* AI card */
+    .ai-card {
+      background: var(--bg2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+    .ai-section { margin-bottom: 14px; }
+    .ai-section:last-of-type { margin-bottom: 0; }
+    .ai-section-head { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
+    .ai-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .ai-section-title { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; }
+    .ai-text { font-size: 13px; line-height: 1.75; color: var(--text); }
+
+    /* Tags */
+    .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 14px; padding-top: 14px; border-top: 0.5px solid var(--border); }
+    .tag { font-size: 11px; padding: 4px 10px; border-radius: 6px; background: var(--bg3); color: var(--text3); border: 0.5px solid var(--border); }
+
+    /* Score bars */
+    .score-card {
+      background: var(--bg2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+    .score-row { margin-bottom: 12px; }
+    .score-row:last-child { margin-bottom: 0; }
+    .score-head { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; }
+    .score-name { color: var(--text2); }
+    .score-num { font-weight: 600; }
+    .score-track { height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+    .score-fill { height: 100%; border-radius: 3px; }
+
+    /* Note */
+    .note {
+      font-size: 11px;
+      color: var(--text3);
+      line-height: 1.6;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 0.5px solid var(--border);
+    }
+
+    /* Disclaimer */
+    .disclaimer {
+      font-size: 10px;
+      color: var(--text3);
+      line-height: 1.6;
+      margin-top: 24px;
+      padding: 12px;
+      background: var(--bg2);
+      border-radius: var(--radius-sm);
+      border: 0.5px solid var(--border);
+    }
+
+    /* Install banner */
+    .install-banner {
+      display: none;
+      position: fixed;
+      bottom: 16px;
+      left: 16px;
+      right: 16px;
+      background: var(--bg2);
+      border: 0.5px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      z-index: 999;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+    .install-banner.show { display: flex; align-items: center; gap: 12px; }
+    .install-text { flex: 1; font-size: 13px; color: var(--text); }
+    .install-text small { display: block; font-size: 11px; color: var(--text2); margin-top: 2px; }
+    .install-btn { background: var(--up); color: #fff; border: none; border-radius: var(--radius-sm); padding: 8px 14px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+    .install-close { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 20px; padding: 4px; }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-top">
+    <div class="app-icon"><i class="ti ti-chart-candle" aria-hidden="true"></i></div>
+    <span class="app-title">주식 AI 분석기</span>
+    <span class="app-subtitle">KRX · KOSPI · KOSDAQ</span>
+  </div>
+  <div class="search-wrap">
+    <input class="search-input" id="tickerInput" type="text" inputmode="numeric" placeholder="종목코드 입력 (예: 005930)" maxlength="10" autocomplete="off" />
+    <button class="search-btn" onclick="analyzeStock()"><i class="ti ti-search" aria-hidden="true"></i> 분석</button>
+  </div>
+</header>
+
+<div class="chips-wrap">
+  <span class="chip" onclick="setTicker('005930')">삼성전자</span>
+  <span class="chip" onclick="setTicker('000660')">SK하이닉스</span>
+  <span class="chip" onclick="setTicker('035420')">NAVER</span>
+  <span class="chip" onclick="setTicker('005380')">현대차</span>
+  <span class="chip" onclick="setTicker('051910')">LG화학</span>
+  <span class="chip" onclick="setTicker('207940')">삼성바이오</span>
+  <span class="chip" onclick="setTicker('006400')">삼성SDI</span>
+</div>
+
+<main class="main" id="result">
+  <div class="empty">
+    <i class="ti ti-telescope" aria-hidden="true"></i>
+    <p>종목코드를 입력하면<br>AI가 핵심 지표를 분석해드립니다</p>
+  </div>
+</main>
+
+<div class="install-banner" id="installBanner">
+  <div class="install-text">
+    홈 화면에 추가하기
+    <small>앱처럼 바로 실행할 수 있어요</small>
+  </div>
+  <button class="install-btn" id="installBtn">설치</button>
+  <button class="install-close" onclick="document.getElementById('installBanner').classList.remove('show')">×</button>
+</div>
+
+<script>
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('installBanner').classList.add('show');
+});
+
+document.getElementById('installBtn').addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById('installBanner').classList.remove('show');
+});
+
+document.getElementById('tickerInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.target.blur(); analyzeStock(); }
+});
+
+function setTicker(code) {
+  document.getElementById('tickerInput').value = code;
+  analyzeStock();
+}
+
+function fmt(n) { return Number(n).toLocaleString('ko-KR'); }
+function fmtBil(n) {
+  const abs = Math.abs(n);
+  if (abs >= 10000) return (n / 10000).toFixed(1) + '조';
+  return fmt(Math.round(n)) + '억';
+}
+
+async function analyzeStock() {
+  const ticker = document.getElementById('tickerInput').value.trim();
+  if (!ticker) return;
+
+  document.getElementById('result').innerHTML = `
+    <div class="loading">
+      <div class="spinner"></div>
+      <div>AI가 종목을 분석하는 중...</div>
+    </div>`;
+
+  const prompt = `당신은 한국 주식 전문 애널리스트입니다. 종목코드 "${ticker}" 에 대해 분석해주세요.
+순수 JSON만 출력하세요. 마크다운 없이.
+
+{
+  "companyName": "회사명",
+  "sector": "업종",
+  "currentPrice": 현재가숫자,
+  "priceChange": 등락률숫자(예:2.3또는-1.5),
+  "high52w": 52주최고가숫자,
+  "low52w": 52주최저가숫자,
+  "marketCap": "시가총액(예:345조)",
+  "per": PER숫자,
+  "perComment": "PER 한줄 쉬운 설명",
+  "pbr": PBR숫자,
+  "pbrComment": "PBR 한줄 쉬운 설명",
+  "dividendYield": 배당수익률숫자,
+  "debtRatio": 부채비율숫자,
+  "foreignOwnership": 외국인보유비율숫자,
+  "revenue": [{"year":"2022","value":매출억원},{"year":"2023","value":매출억원},{"year":"2024","value":매출억원}],
+  "operatingProfit": [{"year":"2022","value":영업이익억원},{"year":"2023","value":영업이익억원},{"year":"2024","value":영업이익억원}],
+  "businessSummary": "기업 개요 2-3문장",
+  "mainFocus": "현재 주력 전략 2-3문장",
+  "investmentPoint": "투자 포인트 2-3문장",
+  "keywords": ["키워드1","키워드2","키워드3","키워드4"],
+  "healthScore": 재무건전성0-100,
+  "growthScore": 성장성0-100,
+  "valueScore": 가치평가0-100,
+  "note": "주의사항 또는 추정 명시"
+}`;
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        messages: [{ role: "user", content: prompt }]
+      })
+    });
+    const data = await res.json();
+    const raw = data.content.map(i => i.text || "").join("").replace(/```json|```/g, "").trim();
+    const d = JSON.parse(raw);
+    render(d);
+  } catch (err) {
+    document.getElementById('result').innerHTML = `<div class="error"><i class="ti ti-alert-circle"></i> 분석 중 오류가 발생했습니다. 종목코드를 확인하고 다시 시도해주세요.</div>`;
+  }
+}
+
+function render(d) {
+  const cur = parseFloat(d.currentPrice), low = parseFloat(d.low52w), high = parseFloat(d.high52w);
+  const rangePos = high > low ? Math.min(100, Math.max(0, Math.round((cur - low) / (high - low) * 100))) : 50;
+  const chg = parseFloat(d.priceChange);
+  const chgClass = chg >= 0 ? 'up' : 'down';
+  const chgSign = chg >= 0 ? '+' : '';
+
+  const revMax = Math.max(...d.revenue.map(r => r.value));
+  const opAbsMax = Math.max(...d.operatingProfit.map(r => Math.abs(r.value)));
+
+  const revRows = d.revenue.map(r => `
+    <div class="bar-row">
+      <span class="bar-year">${r.year}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(r.value/revMax*100)}%;background:#4a9eff44;"></div></div>
+      <span class="bar-val">${fmtBil(r.value)}</span>
+    </div>`).join('');
+
+  const opRows = d.operatingProfit.map(r => {
+    const pct = Math.round(Math.abs(r.value) / opAbsMax * 100);
+    const color = r.value >= 0 ? '#1db87444' : '#f04e2f44';
+    return `<div class="bar-row">
+      <span class="bar-year">${r.year}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color};"></div></div>
+      <span class="bar-val" style="color:${r.value >= 0 ? 'var(--text2)' : 'var(--up)'}">${r.value < 0 ? '-' : ''}${fmtBil(Math.abs(r.value))}</span>
+    </div>`;
+  }).join('');
+
+  const scores = [
+    { label: '재무 건전성', val: d.healthScore, color: '#1db874' },
+    { label: '성장성', val: d.growthScore, color: '#4a9eff' },
+    { label: '가치평가', val: d.valueScore, color: '#f5a623' }
+  ];
+  const scoreRows = scores.map(s => `
+    <div class="score-row">
+      <div class="score-head"><span class="score-name">${s.label}</span><span class="score-num" style="color:${s.color}">${s.val}</span></div>
+      <div class="score-track"><div class="score-fill" style="width:${s.val}%;background:${s.color};"></div></div>
+    </div>`).join('');
+
+  const tags = (d.keywords || []).map(k => `<span class="tag">${k}</span>`).join('');
+
+  document.getElementById('result').innerHTML = `
+    <div class="price-card">
+      <div class="company-meta">
+        <div>
+          <div class="company-sector">${d.sector}</div>
+          <div class="company-name">${d.companyName}</div>
+        </div>
+        <div>
+          <div class="market-cap-label">시가총액</div>
+          <div class="market-cap-val">${d.marketCap}</div>
+        </div>
+      </div>
+      <div class="price-row">
+        <span class="price-current">${fmt(d.currentPrice)}<small style="font-size:16px;font-weight:400;margin-left:3px;">원</small></span>
+        <span class="price-change ${chgClass}">${chgSign}${d.priceChange}%</span>
+      </div>
+      <div class="range-labels"><span>52주 최저 ${fmt(d.low52w)}</span><span>52주 최고 ${fmt(d.high52w)}</span></div>
+      <div class="range-bar">
+        <div class="range-fill" style="width:${rangePos}%"></div>
+        <div class="range-dot" style="left:${rangePos}%"></div>
+      </div>
+    </div>
+
+    <p class="section-label">밸류에이션</p>
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label">PER</div>
+        <div class="metric-val">${d.per}배</div>
+        <div class="metric-sub">${d.perComment}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">PBR</div>
+        <div class="metric-val">${d.pbr}배</div>
+        <div class="metric-sub">${d.pbrComment}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">배당</div>
+        <div class="metric-val">${d.dividendYield}%</div>
+        <div class="metric-sub">배당수익률</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">부채비율</div>
+        <div class="metric-val">${d.debtRatio}%</div>
+        <div class="metric-sub">낮을수록 안정</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">외국인</div>
+        <div class="metric-val">${d.foreignOwnership}%</div>
+        <div class="metric-sub">보유비율</div>
+      </div>
+    </div>
+
+    <p class="section-label">매출 추이</p>
+    <div class="bar-section">${revRows}</div>
+
+    <p class="section-label">영업이익 추이</p>
+    <div class="bar-section">${opRows}</div>
+
+    <p class="section-label">AI 분석</p>
+    <div class="ai-card">
+      <div class="ai-section">
+        <div class="ai-section-head"><div class="ai-dot" style="background:#888"></div><span class="ai-section-title">기업 개요</span></div>
+        <p class="ai-text">${d.businessSummary}</p>
+      </div>
+      <div class="ai-section">
+        <div class="ai-section-head"><div class="ai-dot" style="background:var(--blue)"></div><span class="ai-section-title">주력 전략</span></div>
+        <p class="ai-text">${d.mainFocus}</p>
+      </div>
+      <div class="ai-section">
+        <div class="ai-section-head"><div class="ai-dot" style="background:var(--up)"></div><span class="ai-section-title">투자 포인트</span></div>
+        <p class="ai-text">${d.investmentPoint}</p>
+      </div>
+      <div class="tags">${tags}</div>
+    </div>
+
+    <p class="section-label">종합 점수</p>
+    <div class="score-card">
+      ${scoreRows}
+      ${d.note ? `<div class="note"><i class="ti ti-info-circle" style="font-size:13px;vertical-align:-2px;" aria-hidden="true"></i> ${d.note}</div>` : ''}
+    </div>
+
+    <p class="disclaimer">※ AI가 생성한 참고 정보입니다. 실제 투자 결정의 근거로 사용하지 마세요. 정확한 데이터는 DART·KRX·증권사 HTS를 확인하세요.</p>
+  `;
+}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
